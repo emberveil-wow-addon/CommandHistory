@@ -499,7 +499,7 @@ end
 -- send. The search field works the same way round: we never see the keys, we
 -- just read what the client has already drawn into the box.
 
-local panel, search, countText, upButton, downButton
+local panel, search, countText, upButton, downButton, mmButton
 local panelTitle, searchLabel, panelHint, clearButton
 local rowButtons, rowNumber, rowText, rowUses, rowEntry, rowIndex = {}, {}, {}, {}, {}, {}
 local PANEL_ROWS = 12
