@@ -1,0 +1,9 @@
+## Interface: 11200
+## Title: CommandHistory
+## Notes: Keeps what you have typed in a clickable list: search, pinning, use counts and one click to make a macro. This client hands addons no keys in the chat box, so the list replaces the missing Up arrow.
+## Notes-ruRU: Помнит набранное и показывает списком: поиск, закрепление, счётчик повторов и макрос в одно нажатие. Клиент не отдаёт аддонам клавиши в поле ввода, поэтому список заменяет стрелку вверх.
+## Author: Vivk
+## Version: 0.1.0
+## SavedVariables: CommandHistoryDB
+
+CommandHistory.lua
