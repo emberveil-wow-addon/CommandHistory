@@ -3,7 +3,7 @@
 ## Notes: Keeps what you have typed in a clickable list: search, pinning, use counts and one click to make a macro. Its own command line takes a paste from the clipboard, and the output window shows what the server answered, copyable and full screen.
 ## Notes-ruRU: Помнит набранное и показывает списком: поиск, закрепление, счётчик повторов и макрос в одно нажатие. Своя строка ввода принимает вставку из буфера, а окно ответа показывает, что ответил сервер — с возможностью скопировать и развернуть на весь экран.
 ## Author: Vivk
-## Version: 0.2.0
+## Version: 0.2.1
 ## SavedVariables: CommandHistoryDB
 
 CommandHistory.lua

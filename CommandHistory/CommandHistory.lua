@@ -1,5 +1,5 @@
 --[[--------------------------------------------------------------------
-  CommandHistory 0.2.0
+  CommandHistory 0.2.1
   Client 1.12.1 / Lua 5.1 (Emberveil).
 
   The chat input box on this client does not walk back through what was
@@ -19,7 +19,7 @@
 ----------------------------------------------------------------------]]
 
 local ADDON   = "CommandHistory"
-local VERSION = "0.2.0"
+local VERSION = "0.2.1"
 
 local defaults = {
   lines = nil,   -- filled lazily: the remembered input, oldest first
@@ -90,7 +90,7 @@ local STRINGS = {
     keysNote   = "буквы печатаются, а стрелки нет — их забирает клиент; тишина совсем — клавиши до аддонов не доходят.",
     keysDone   = "слежка за клавишами закончена.",
     langSet    = "язык: %s",
-    help       = "команды: /commandhistory [panel | N | out | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
+    help       = "команды: /commandhistory [panel | N | out | cmds | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
     on         = "вкл",
     off        = "выкл",
     inputLabel = "Команда:",
@@ -106,7 +106,7 @@ local STRINGS = {
     tipOut     = "Показать ответ на эту команду",
     outTitle   = "Ответ на команду",
     outFor     = "команда: %s",
-    outHint    = "выделите мышью и нажмите Ctrl+C, чтобы скопировать · листать — стрелками слева",
+    outHint    = "каждая строка выделяется отдельно: щёлкните её, выделите и Ctrl+C · листать — стрелками слева",
     outEmpty   = "ответа не записано — отправьте команду из этого окна или из поля ввода",
     outFull    = "Во весь экран",
     outSmall   = "Обычный размер",
@@ -118,6 +118,9 @@ local STRINGS = {
     probeOut   = "записано ответов: команд %d, строк %d, слушаю сейчас: %s",
     probeCatch = "перехват AddMessage: %s, события чата: подписаны (%s)",
     outWho     = "найдено игроков: %d",
+    cmdsHead   = "команды всех аддонов: обработчиков %d, команд %d",
+    cmdsNone   = "не нашёл ни одной зарегистрированной команды.",
+    cmdsTitle  = "все команды",
     outClear   = "Очистить",
     outClearTip = "Забыть ответ на эту команду. С Shift — забыть все записанные ответы",
     outCleared = "ответ на «%s» забыт.",
@@ -175,7 +178,7 @@ local STRINGS = {
     keysNote   = "letters printed but no arrows — the client keeps them; nothing at all — no keys reach addons.",
     keysDone   = "key watch finished.",
     langSet    = "language: %s",
-    help       = "commands: /commandhistory [panel | N | out | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
+    help       = "commands: /commandhistory [panel | N | out | cmds | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
     on         = "on",
     off        = "off",
     inputLabel = "Command:",
@@ -191,7 +194,7 @@ local STRINGS = {
     tipOut     = "Show the answer to this command",
     outTitle   = "Command output",
     outFor     = "command: %s",
-    outHint    = "select with the mouse and press Ctrl+C to copy - page with the arrows on the left",
+    outHint    = "every line is its own field: click it, select and press Ctrl+C - page with the arrows on the left",
     outEmpty   = "nothing recorded - send a command from this window or from the input field",
     outFull    = "Full screen",
     outSmall   = "Normal size",
@@ -203,6 +206,9 @@ local STRINGS = {
     probeOut   = "recorded answers: %d commands, %d lines, listening now: %s",
     probeCatch = "AddMessage hook: %s, chat events: subscribed (%s)",
     outWho     = "players found: %d",
+    cmdsHead   = "commands of every addon: %d handlers, %d commands",
+    cmdsNone   = "no registered command found.",
+    cmdsTitle  = "every command",
     outClear   = "Clear",
     outClearTip = "Forget the answer to this command. With Shift, forget every recorded answer",
     outCleared = "the answer to \"%s\" is forgotten.",
@@ -845,6 +851,47 @@ local function OutWhoList()
     end
     i = i + 1
   end
+end
+
+-- Every slash command the client knows. It routes them through globals named
+-- SLASH_<KEY>1..8 while the handlers live in SlashCmdList under the same key,
+-- so walking that table and asking for the globals gives the whole picture.
+-- /script is disabled on this client, which makes an addon the only place this
+-- can be done at all.
+local function CmdLines()
+  if type(SlashCmdList) ~= "table" then return {}, 0, 0 end
+
+  local keys, kn = {}, 0
+  for key in pairs(SlashCmdList) do
+    kn = kn + 1
+    keys[kn] = key
+  end
+  table.sort(keys)
+
+  local lines, ln, total = {}, 0, 0
+  local i = 1
+  while i <= kn do
+    local key = keys[i]
+    local names, nn = "", 0
+    local j = 1
+    while j <= 8 do
+      local cmd = getglobal and getglobal("SLASH_" .. key .. j)
+      if type(cmd) == "string" and cmd ~= "" then
+        if nn > 0 then names = names .. "  " end
+        names = names .. cmd
+        nn = nn + 1
+        total = total + 1
+      end
+      j = j + 1
+    end
+    if nn > 0 then
+      ln = ln + 1
+      lines[ln] = key .. ":  " .. names
+    end
+    i = i + 1
+  end
+
+  return lines, ln, total
 end
 
 -- Opens the recording window for one command. Anything printed for the next
@@ -1811,6 +1858,25 @@ local function HandleSlash(msg)
     Print(L("keysAsk"))
     Print(L("keysNote"))
 
+  elseif msg == "cmds" or msg == "commands" then
+    local lines, n, total = CmdLines()
+    if n == 0 then
+      Report(L("cmdsNone"))
+    else
+      -- the list goes through the recorder, so it lands in the output window
+      -- where it can be paged and copied
+      local name = "/cmdh cmds"
+      OutStart(name)
+      local i = 1
+      while i <= n do
+        OutRecord(lines[i])
+        i = i + 1
+      end
+      OutStop()
+      Report(Lf("cmdsHead", n, total))
+      if ShowOutHook then ShowOutHook(name) end
+    end
+
   elseif msg == "out" then
     if outLast and OutHas(outLast) then
       Report(Lf("outLast", outLast))
@@ -1881,7 +1947,8 @@ end
 -- not registered here, so selecting cannot be done for them. Paging is ours
 -- rather than a ScrollFrame's -- we own the text, so showing a window of
 -- lines is both simpler and predictable.
-local outFrame, outEdit, outTitleFS, outHintFS, outCmdFS, outCountFS, outEmptyFS
+local outFrame, outPane, outTitleFS, outHintFS, outCmdFS, outCountFS
+local outLine = {}        -- i -> one line of the answer, its own edit box, outEmptyFS
 local outUpBtn, outDownBtn, outFullBtn, outCloseBtn, outClearBtn
 local outShown = nil      -- command the window is showing
 local outOffset = 0
@@ -1890,8 +1957,20 @@ local OUT_ROWS_SMALL = 14
 local OUT_ROWS_FULL = 34
 local UpdateOut
 
+-- How many lines fit right now. A fixed 34 left a third of a full screen
+-- window empty, so the number is taken from the height the field actually has:
+-- the field spans from 56 below the top to 58 above the bottom, and a line of
+-- this font takes about 15.
+local OUT_LINE_H = 15
+
 local function OutRows()
-  return outFullMode and OUT_ROWS_FULL or OUT_ROWS_SMALL
+  local fixed = outFullMode and OUT_ROWS_FULL or OUT_ROWS_SMALL
+  if not outFrame or not outFrame.GetHeight then return fixed end
+  local h = outFrame:GetHeight()
+  if type(h) ~= "number" or h <= 0 then return fixed end
+  local n = math.floor((h - 122) / OUT_LINE_H)
+  if n < 5 then n = 5 elseif n > 120 then n = 120 end
+  return n
 end
 
 local function OutApplySize()
@@ -1906,7 +1985,7 @@ local function OutApplySize()
     outFrame:ClearAllPoints()
     outFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
     outFrame:SetWidth(600)
-    outFrame:SetHeight(120 + OUT_ROWS_SMALL * 14)
+    outFrame:SetHeight(122 + OUT_ROWS_SMALL * OUT_LINE_H)
     if outFullBtn then outFullBtn:SetText("|cffffd700" .. L("outFull") .. "|r") end
   end
 end
@@ -1950,6 +2029,40 @@ local function OutForgetAll()
   return n
 end
 
+-- A line of the answer. It is an EditBox rather than a FontString because
+-- only an edit box can be selected with the mouse and copied with Ctrl+C.
+local function OutLine(i)
+  if outLine[i] then return outLine[i] end
+  local e = CreateFrame("EditBox", "CommandHistoryOutLine" .. i, outPane)
+  e:SetHeight(OUT_LINE_H)
+  e:SetPoint("TOPLEFT", outPane, "TOPLEFT", 6, -4 - (i - 1) * OUT_LINE_H)
+  e:SetPoint("TOPRIGHT", outPane, "TOPRIGHT", -6, -4 - (i - 1) * OUT_LINE_H)
+  e:EnableMouse(true)
+  pcall(function() e:SetAutoFocus(false) end)
+  pcall(function() e:SetFontObject(ChatFontNormal) end)
+  if not e:GetFont() or e:GetFont() == "" then
+    e:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+  end
+  e:SetTextColor(0.9, 0.9, 0.9)
+  e:SetJustifyH("LEFT")
+  e:SetTextInsets(2, 2, 0, 0)
+  e:SetScript("OnMouseDown", function(self)
+    self = self or this
+    if self.SetFocus then self:SetFocus() end
+  end)
+  e:SetScript("OnEscapePressed", function(self)
+    self = self or this
+    if self.ClearFocus then self:ClearFocus() end
+    if outFrame then outFrame:Hide() end
+  end)
+  e:SetScript("OnEnterPressed", function(self)
+    self = self or this
+    if self.ClearFocus then self:ClearFocus() end
+  end)
+  outLine[i] = e
+  return e
+end
+
 local function BuildOut()
   if outFrame then return end
 
@@ -1990,44 +2103,27 @@ local function BuildOut()
   outCmdFS:SetJustifyH("LEFT")
   outCmdFS:SetTextColor(1, 0.82, 0)
 
-  outEdit = CreateFrame("EditBox", "CommandHistoryOutText", outFrame)
-  outEdit:SetPoint("TOPLEFT", outFrame, "TOPLEFT", 18, -56)
-  outEdit:SetPoint("BOTTOMRIGHT", outFrame, "BOTTOMRIGHT", -18, 58)
-  outEdit:EnableMouse(true)
-  pcall(function() outEdit:SetMultiLine(true) end)
-  pcall(function() outEdit:SetAutoFocus(false) end)
-  pcall(function() outEdit:SetFontObject(ChatFontNormal) end)
-  if not outEdit:GetFont() or outEdit:GetFont() == "" then
-    outEdit:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
-  end
-  outEdit:SetTextColor(0.9, 0.9, 0.9)
-  outEdit:SetJustifyH("LEFT")
-  outEdit:SetJustifyV("TOP")
-  outEdit:SetTextInsets(6, 6, 4, 4)
-  outEdit:SetMaxLetters(0)
-  outEdit:SetBackdrop({
+  -- One EditBox per line instead of a single multi-line one. Selecting across
+  -- lines does not work on this client -- only the first line of a multi-line
+  -- box can be picked up -- so every line gets a box of its own and any of
+  -- them can be selected and copied.
+  outPane = CreateFrame("Frame", "CommandHistoryOutPane", outFrame)
+  outPane:SetPoint("TOPLEFT", outFrame, "TOPLEFT", 18, -56)
+  outPane:SetPoint("BOTTOMRIGHT", outFrame, "BOTTOMRIGHT", -18, 58)
+  outPane:SetBackdrop({
     bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
     tile = true, tileSize = 16, edgeSize = 12,
     insets = { left = 4, right = 4, top = 4, bottom = 4 },
   })
-  outEdit:SetBackdropColor(0, 0, 0, 0.7)
-  outEdit:SetScript("OnMouseDown", function(self)
-    self = self or this
-    if self.SetFocus then self:SetFocus() end
-  end)
-  outEdit:SetScript("OnEscapePressed", function(self)
-    self = self or this
-    if self.ClearFocus then self:ClearFocus() end
-    outFrame:Hide()
-  end)
+  outPane:SetBackdropColor(0, 0, 0, 0.7)
 
   -- The "nothing recorded" notice is a label OVER the field, not text inside
   -- it: text inside would be copied along with the answer, and it is not part
   -- of the answer.
   outEmptyFS = MakeFont(outFrame, 12)
-  outEmptyFS:SetPoint("TOPLEFT", outEdit, "TOPLEFT", 8, -8)
-  outEmptyFS:SetPoint("TOPRIGHT", outEdit, "TOPRIGHT", -8, -8)
+  outEmptyFS:SetPoint("TOPLEFT", outPane, "TOPLEFT", 8, -8)
+  outEmptyFS:SetPoint("TOPRIGHT", outPane, "TOPRIGHT", -8, -8)
   outEmptyFS:SetJustifyH("LEFT")
   outEmptyFS:SetTextColor(0.5, 0.5, 0.5)
   outEmptyFS:Hide()
@@ -2126,8 +2222,12 @@ UpdateOut = function()
   if outOffset > maxOffset then outOffset = maxOffset end
   if outOffset < 0 then outOffset = 0 end
 
+  local function hideFrom(k)
+    while outLine[k] do outLine[k]:Hide(); k = k + 1 end
+  end
+
   if total == 0 then
-    outEdit:SetText("")
+    hideFrom(1)
     if outEmptyFS then
       outEmptyFS:SetText(L("outEmpty"))
       outEmptyFS:Show()
@@ -2137,15 +2237,16 @@ UpdateOut = function()
   end
   if outEmptyFS then outEmptyFS:Hide() end
 
-  local text, i = "", 1
+  local i = 1
   while i <= rows do
     local ln = lines[i + outOffset]
     if not ln then break end
-    if i > 1 then text = text .. "\n" end
-    text = text .. ln
+    local e = OutLine(i)
+    e:SetText(ln)
+    e:Show()
     i = i + 1
   end
-  outEdit:SetText(text)
+  hideFrom(i)
   outCountFS:SetText(Lf("outLines", outOffset + 1, outOffset + i - 1, total))
 end
 
