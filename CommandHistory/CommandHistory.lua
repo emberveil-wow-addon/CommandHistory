@@ -1,5 +1,5 @@
 --[[--------------------------------------------------------------------
-  CommandHistory 0.1.0
+  CommandHistory 0.2.0
   Client 1.12.1 / Lua 5.1 (Emberveil).
 
   The chat input box on this client does not walk back through what was
@@ -19,7 +19,7 @@
 ----------------------------------------------------------------------]]
 
 local ADDON   = "CommandHistory"
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 
 local defaults = {
   lines = nil,   -- filled lazily: the remembered input, oldest first
@@ -48,7 +48,7 @@ local STRINGS = {
     tipUp      = "Вверх на строку, с Shift — на страницу",
     tipDown    = "Вниз на строку, с Shift — на страницу",
     clearAll   = "Очистить всё",
-    hintClick  = "клик по строке — в поле ввода",
+    hintClick  = "клик по строке — в поле ввода чата",
     tipRow     = "Щёлкните, чтобы подставить команду в поле ввода",
     nothing    = "ничего не найдено",
     counter    = "%d-%d из %d (всего %d)",
@@ -90,9 +90,40 @@ local STRINGS = {
     keysNote   = "буквы печатаются, а стрелки нет — их забирает клиент; тишина совсем — клавиши до аддонов не доходят.",
     keysDone   = "слежка за клавишами закончена.",
     langSet    = "язык: %s",
-    help       = "команды: /commandhistory [panel | N | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
+    help       = "команды: /commandhistory [panel | N | out | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
     on         = "вкл",
     off        = "выкл",
+    inputLabel = "Команда:",
+    inputTip   = "печатайте или вставьте из буфера: Ctrl+V. Enter — отправить",
+    inputHint  = "Ctrl+V — вставить из буфера · Enter — отправить · ответ смотрите по «?» в списке",
+    sendTip    = "Отправить строку",
+    send       = "Отправить",
+    sendNoText = "строка пуста.",
+    sendHow    = "отправлено через %s",
+    sendFail   = "не удалось отправить: клиент не отдал ни одного способа.",
+    sendManual = "сам отправить не смог — строка в поле ввода чата, нажмите Enter.",
+    noRead     = "клиент не даёт прочитать поле ввода (нет GetText) — своя форма ввода тут невозможна.",
+    tipOut     = "Показать ответ на эту команду",
+    outTitle   = "Ответ на команду",
+    outFor     = "команда: %s",
+    outHint    = "выделите мышью и нажмите Ctrl+C, чтобы скопировать · листать — стрелками слева",
+    outEmpty   = "ответа не записано — отправьте команду из этого окна или из поля ввода",
+    outFull    = "Во весь экран",
+    outSmall   = "Обычный размер",
+    outClose   = "Закрыть",
+    outLines   = "строки %d-%d из %d",
+    outNone    = "по этой команде ответа не записано.",
+    outLast    = "последняя команда: %s",
+    probeEdit  = "своё поле ввода: GetText %s, GetNumLetters %s, Insert %s, SetMultiLine %s, HighlightText %s",
+    probeOut   = "записано ответов: команд %d, строк %d, слушаю сейчас: %s",
+    probeCatch = "перехват AddMessage: %s, события чата: подписаны (%s)",
+    outWho     = "найдено игроков: %d",
+    outClear   = "Очистить",
+    outClearTip = "Забыть ответ на эту команду. С Shift — забыть все записанные ответы",
+    outCleared = "ответ на «%s» забыт.",
+    outClearedAll = "все записанные ответы забыты (%d).",
+    probeEsc   = "Esc: UISpecialFrames %s, окно в списке %s, перехват меню %s",
+    probePaste = "проверка буфера: щёлкните поле «Команда» в окне истории, нажмите Ctrl+V и посмотрите, появился ли текст. Символов в поле сейчас: %s",
   },
   en = {
     title      = "Command history",
@@ -102,7 +133,7 @@ local STRINGS = {
     tipUp      = "Up one line, Shift for a whole page",
     tipDown    = "Down one line, Shift for a whole page",
     clearAll   = "Clear all",
-    hintClick  = "click — put in the chat box",
+    hintClick  = "click a line - into the chat box",
     tipRow     = "Click to put the command in the chat box",
     nothing    = "nothing found",
     counter    = "%d-%d of %d (%d stored)",
@@ -144,9 +175,40 @@ local STRINGS = {
     keysNote   = "letters printed but no arrows — the client keeps them; nothing at all — no keys reach addons.",
     keysDone   = "key watch finished.",
     langSet    = "language: %s",
-    help       = "commands: /commandhistory [panel | N | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
+    help       = "commands: /commandhistory [panel | N | out | minimap | reset | list | clear | size N | lang ru/en/auto | alt | own | keys | probe]",
     on         = "on",
     off        = "off",
+    inputLabel = "Command:",
+    inputTip   = "type or paste from the clipboard: Ctrl+V. Enter sends",
+    inputHint  = "Ctrl+V pastes from the clipboard - Enter sends - the answer is behind the \"?\" in the list",
+    sendTip    = "Send the line",
+    send       = "Send",
+    sendNoText = "the line is empty.",
+    sendHow    = "sent through %s",
+    sendFail   = "could not send: the client offered no way to do it.",
+    sendManual = "could not send it myself - the line is in the chat box, press Enter.",
+    noRead     = "the client will not let the input field be read (no GetText) - an own input form is impossible here.",
+    tipOut     = "Show the answer to this command",
+    outTitle   = "Command output",
+    outFor     = "command: %s",
+    outHint    = "select with the mouse and press Ctrl+C to copy - page with the arrows on the left",
+    outEmpty   = "nothing recorded - send a command from this window or from the input field",
+    outFull    = "Full screen",
+    outSmall   = "Normal size",
+    outClose   = "Close",
+    outLines   = "lines %d-%d of %d",
+    outNone    = "nothing was recorded for this command.",
+    outLast    = "last command: %s",
+    probeEdit  = "own edit box: GetText %s, GetNumLetters %s, Insert %s, SetMultiLine %s, HighlightText %s",
+    probeOut   = "recorded answers: %d commands, %d lines, listening now: %s",
+    probeCatch = "AddMessage hook: %s, chat events: subscribed (%s)",
+    outWho     = "players found: %d",
+    outClear   = "Clear",
+    outClearTip = "Forget the answer to this command. With Shift, forget every recorded answer",
+    outCleared = "the answer to \"%s\" is forgotten.",
+    outClearedAll = "every recorded answer is forgotten (%d).",
+    probeEsc   = "Esc: UISpecialFrames %s, window listed %s, menu hook %s",
+    probePaste = "clipboard check: click the Command field in the history window, press Ctrl+V and see whether text appears. Letters in the field now: %s",
   },
 }
 
@@ -158,7 +220,9 @@ local function CurrentLang()
 end
 
 local function L(key) return STRINGS[CurrentLang()][key] or key end
-local function Lf(key, a, b, c, d) return string.format(L(key), a, b, c, d) end
+local function Lf(key, a, b, c, d, e, f)
+  return string.format(L(key), a, b, c, d, e, f)
+end
 
 ----------------------------------------------------------------------
 -- state
@@ -170,11 +234,45 @@ local spy     = 0         -- seconds left of the key spy
 local boxCount = 0
 local pos, draft = 0, nil -- how far back we are, and the unsent line
 local driver
+local OutStartHook        -- starts recording the answer; set further down
+local origGameMenu        -- the client's ToggleGameMenu, once we wrap it
+
+local speaking = false      -- true while our own line is going to the chat
+
+local OutRecordHook       -- set once the recorder exists
+local chatHookOk = false  -- did wrapping AddMessage actually take?
+chatEventCount = 0        -- how many chat events the client accepted
 
 local function Print(msg)
   if DEFAULT_CHAT_FRAME then
     DEFAULT_CHAT_FRAME:AddMessage("|cffffcc66" .. ADDON .. ":|r " .. msg)
   end
+  -- If the frame would not take our wrapper, the line has to be handed to the
+  -- recorder here instead, or the answer to an addon command is lost.
+  if not chatHookOk and OutRecordHook then OutRecordHook(msg) end
+end
+
+-- Some of our own lines are about the addon rather than about the command --
+-- "sent through ...", "nothing recorded" -- and those have no business inside
+-- the recorded answer. Everything else we print is a real reply to a slash
+-- command and belongs there, so only these are marked.
+local function Report(msg)
+  speaking = true
+  Print(msg)
+  speaking = false
+end
+
+-- Escape closes a window whose NAME is in UISpecialFrames. The list holds
+-- names, so an unnamed frame can never be registered, and the same name must
+-- not go in twice.
+local function EscClose(name)
+  if type(UISpecialFrames) ~= "table" or not name then return end
+  local i = 1
+  while UISpecialFrames[i] do
+    if UISpecialFrames[i] == name then return end
+    i = i + 1
+  end
+  UISpecialFrames[i] = name
 end
 
 local function InitDB()
@@ -402,7 +500,12 @@ local function HookBox(box)
   local origEnter = box:GetScript("OnEnterPressed")
   SafeSetScript(box, "OnEnterPressed", function(self)
     self = self or this or box
-    if self.GetText then Remember(self:GetText()) end
+    if self.GetText then
+      local sent = self:GetText()
+      Remember(sent)
+      -- the answer to a line typed straight into chat is worth keeping too
+      if OutStartHook and sent and sent ~= "" then OutStartHook(sent) end
+    end
     ResetWalk()
     if origEnter then origEnter(self) end
   end)
@@ -501,6 +604,8 @@ end
 
 local panel, search, countText, upButton, downButton, mmButton
 local panelTitle, searchLabel, panelHint, clearButton
+local input, inputLabel, sendButton, inputHintFS   -- our own command line
+local ShowOutHook                     -- set once the output window exists
 local rowButtons, rowNumber, rowText, rowUses, rowEntry, rowIndex = {}, {}, {}, {}, {}, {}
 local PANEL_ROWS = 12
 local ROW_H      = 16
@@ -533,6 +638,328 @@ end
 local function SearchText()
   if not search or not search.GetText then return "" end
   return search:GetText() or ""
+end
+
+----------------------------------------------------------------------
+-- what the client answered
+----------------------------------------------------------------------
+
+-- The answer to a command arrives as ordinary chat lines, so the only way to
+-- keep it is to sit in front of AddMessage on every chat window and write
+-- down what goes through. Lines are kept in memory only: a session's worth of
+-- server output has no business growing the saved variables file.
+local outBook = {}        -- command text -> the record below
+local OUT_KEEP = 10       -- how many commands keep their answer
+local OUT_CHARS = 400     -- longest line written down
+local outWatch = nil      -- command being listened for right now
+local outUntil = 0        -- until when
+local outLast = nil       -- the last command that got anything
+local chatHooked = {}     -- frame -> true
+local OUT_WINDOW = 6      -- seconds of chat counted as the answer
+local OUT_MAX = 400       -- lines kept per command
+
+-- The answers live in the saved variables, so a /reload does not throw away
+-- what the last commands said -- that was the first thing anyone noticed.
+-- Bounded on three sides: ten commands, four hundred lines each, four hundred
+-- characters a line.
+local function OutLoad()
+  outBook = {}
+  local arr = CommandHistoryDB and CommandHistoryDB.out
+  if type(arr) ~= "table" then
+    arr = {}
+    if CommandHistoryDB then CommandHistoryDB.out = arr end
+  end
+  local i = 1
+  while arr[i] do
+    local r = arr[i]
+    if type(r) == "table" and r.cmd and type(r.lines) == "table" then
+      outBook[r.cmd] = r
+    end
+    i = i + 1
+  end
+  outLast = CommandHistoryDB and CommandHistoryDB.outLast or nil
+end
+
+local function OutRemember(rec)
+  local arr = CommandHistoryDB.out
+  if type(arr) ~= "table" then arr = {}; CommandHistoryDB.out = arr end
+
+  -- drop an older answer for the same command, then append
+  local i, n = 1, 0
+  while arr[i] do n = n + 1; i = i + 1 end
+  local w = 1
+  i = 1
+  while i <= n do
+    if arr[i] and arr[i].cmd ~= rec.cmd then
+      arr[w] = arr[i]
+      w = w + 1
+    end
+    i = i + 1
+  end
+  while arr[w] do arr[w] = nil; w = w + 1 end
+
+  n = 0
+  while arr[n + 1] do n = n + 1 end
+  arr[n + 1] = rec
+  n = n + 1
+
+  -- trim the oldest away
+  while n > OUT_KEEP do
+    local k = 1
+    while arr[k + 1] do arr[k] = arr[k + 1]; k = k + 1 end
+    arr[k] = nil
+    n = n - 1
+  end
+end
+
+local function OutRecord(text)
+  if not outWatch or speaking then return end
+  if not text or text == "" then return end
+  local rec = outBook[outWatch]
+  if not rec then return end
+  local n = 0
+  while rec.lines[n + 1] do n = n + 1 end
+  if n >= OUT_MAX then return end
+  -- strip the colour codes: they help nobody once the text is on its way to
+  -- the clipboard, and they make a copied line unreadable
+  local clean = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
+  clean = string.gsub(clean, "|r", "")
+  clean = string.gsub(clean, "|H.-|h(.-)|h", "%1")
+  if string.len(clean) > OUT_CHARS then clean = string.sub(clean, 1, OUT_CHARS) .. "..." end
+  rec.lines[n + 1] = clean
+  if n == 0 then
+    -- first line of an answer: keep it, and light the "?" beside the row at
+    -- once. Without this the mark stayed dim until something else redrew the
+    -- list, which looked like the answer had not been recorded at all.
+    if CommandHistoryDB then OutRemember(rec) end
+    if UpdatePanelHook then UpdatePanelHook() end
+  end
+  outLast = outWatch
+  if CommandHistoryDB then CommandHistoryDB.outLast = outWatch end
+end
+
+-- Wrapping AddMessage only works if the frame will take a new field. On a
+-- client where frames are protected the assignment is swallowed without an
+-- error, so the result is checked rather than assumed: chatHookOk decides
+-- whether anything can be caught this way at all.
+-- Both ways in can be alive at once: the wrapper sees the formatted line the
+-- player reads, the event carries the raw text. To keep one answer instead of
+-- two, the last few event strings are remembered for half a second and a
+-- chat line that contains one of them is left to the event.
+local evSeen, evAt, evNext = {}, {}, 1
+local EV_N = 6
+
+local function EvNote(t)
+  evSeen[evNext] = t
+  evAt[evNext] = (GetTime and GetTime()) or 0
+  evNext = evNext + 1
+  if evNext > EV_N then evNext = 1 end
+end
+
+local function EvRecent(msg)
+  if not msg then return false end
+  local now = (GetTime and GetTime()) or 0
+  local i = 1
+  while i <= EV_N do
+    local t = evSeen[i]
+    if t and t ~= "" and (now - (evAt[i] or 0)) < 0.5 then
+      if string.find(msg, t, 1, true) then return true end
+    end
+    i = i + 1
+  end
+  return false
+end
+
+local function HookChatFrame(f)
+  if not f or chatHooked[f] or type(f.AddMessage) ~= "function" then return end
+  chatHooked[f] = true
+  local orig = f.AddMessage
+  local wrapper = function(self, msg, r, g, b, id)
+    if not EvRecent(msg) then OutRecord(msg) end
+    return orig(self, msg, r, g, b, id)
+  end
+  f.AddMessage = wrapper
+  if f.AddMessage == wrapper then chatHookOk = true end
+end
+
+local function HookChatFrames()
+  if DEFAULT_CHAT_FRAME then HookChatFrame(DEFAULT_CHAT_FRAME) end
+  if not getglobal then return end
+  local i = 1
+  while i <= 10 do
+    HookChatFrame(getglobal("ChatFrame" .. i))
+    i = i + 1
+  end
+end
+
+OutRecordHook = OutRecord
+
+-- The other way the client's answer arrives. Where AddMessage cannot be
+-- wrapped, this is the only way: the server's own replies come as chat events
+-- whatever the frame does. Addon output does not, which is why Print hands
+-- its line over directly.
+local CHAT_EVENTS = {
+  "CHAT_MSG_SYSTEM", "CHAT_MSG_CHANNEL", "CHAT_MSG_CHANNEL_NOTICE",
+  "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL_LIST",
+  "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_SAY",
+  "CHAT_MSG_YELL", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER", "CHAT_MSG_PARTY",
+  "CHAT_MSG_RAID", "CHAT_MSG_RAID_WARNING", "CHAT_MSG_EMOTE",
+  "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_MONSTER_SAY", "CHAT_MSG_MONSTER_YELL",
+  "CHAT_MSG_MONSTER_WHISPER", "CHAT_MSG_MONSTER_EMOTE", "CHAT_MSG_LOOT",
+  "CHAT_MSG_MONEY", "CHAT_MSG_SKILL", "CHAT_MSG_TRADESKILLS",
+  "CHAT_MSG_COMBAT_MISC_INFO", "CHAT_MSG_IGNORED", "CHAT_MSG_AFK",
+  "CHAT_MSG_DND", "CHAT_MSG_BG_SYSTEM_NEUTRAL", "CHAT_MSG_OPENING",
+}
+
+local function OutChatEvent(ev, a1, a2)
+  if not outWatch then return end
+  if not a1 or a1 == "" then return end
+  EvNote(a1)
+  if a2 and a2 ~= "" and ev ~= "CHAT_MSG_SYSTEM" then
+    OutRecord("[" .. a2 .. "] " .. a1)
+  else
+    OutRecord(a1)
+  end
+end
+
+-- /who is answered through the who list rather than through chat on this
+-- client, so it is read out of the API instead. Same for the time played
+-- reply, which arrives as its own event.
+local function OutWhoList()
+  if not outWatch then return end
+  if type(GetNumWhoResults) ~= "function" or type(GetWhoInfo) ~= "function" then return end
+  local n = GetNumWhoResults()
+  if not n or n < 1 then return end
+  OutRecord(Lf("outWho", n))
+  local i = 1
+  while i <= n do
+    local name, guild, level, race, class, zone = GetWhoInfo(i)
+    if name then
+      local line = name
+      if level then line = line .. " - " .. level end
+      if class then line = line .. " " .. class end
+      if race then line = line .. " " .. race end
+      if zone and zone ~= "" then line = line .. " - " .. zone end
+      if guild and guild ~= "" then line = line .. " <" .. guild .. ">" end
+      OutRecord(line)
+    end
+    i = i + 1
+  end
+end
+
+-- Opens the recording window for one command. Anything printed for the next
+-- few seconds belongs to it.
+local function OutStart(text)
+  -- Remember() trims the line before storing it, and the "?" beside a row
+  -- looks the answer up by that stored text. Keying the record with the raw
+  -- string left a trailing space enough to lose the answer.
+  if type(text) ~= "string" then return end
+  text = string.gsub(text, "^%s+", "")
+  text = string.gsub(text, "%s+$", "")
+  if text == "" then return end
+
+  outWatch = text
+  outUntil = (GetTime and GetTime() or 0) + OUT_WINDOW
+  local rec = { cmd = text, at = (time and time()) or 0, lines = {} }
+  outBook[text] = rec
+  -- not written down yet: a command that answers nothing should not take up
+  -- one of the ten kept slots
+  HookChatFrames()
+end
+
+OutStartHook = OutStart
+
+local function OutStop()
+  outWatch = nil
+end
+
+local function OutFor(text)
+  return outBook[text]
+end
+
+-- A record with no lines in it is the same as no record: the command answered
+-- nothing, so the mark beside it stays dim and the button says so.
+local function OutHas(text)
+  local rec = outBook[text]
+  return (rec and rec.lines and rec.lines[1]) and true or false
+end
+
+----------------------------------------------------------------------
+-- sending a line ourselves
+----------------------------------------------------------------------
+
+-- Our own input field has to put the line on its way without the chat box's
+-- Enter key, which addons cannot press. Four ways are tried in order and the
+-- first one the client actually has wins; the name of the winner is printed
+-- so a failure says which door was closed.
+local function SlashDispatch(line)
+  if type(SlashCmdList) ~= "table" then return false end
+  local _, _, word, rest = string.find(line, "^(/%S+)%s*(.*)$")
+  if not word then return false end
+  local lower = string.lower(word)
+  for key, fn in pairs(SlashCmdList) do
+    local i = 1
+    while i <= 8 do
+      local cmd = getglobal and getglobal("SLASH_" .. key .. i)
+      if cmd and string.lower(cmd) == lower then
+        fn(rest or "")
+        return true
+      end
+      i = i + 1
+    end
+  end
+  return false
+end
+
+local function SendLine(text)
+  if not text or text == "" then
+    Report(L("sendNoText"))
+    return false
+  end
+
+  OutStart(text)
+  Remember(text)      -- the chat box path would do this itself; the rest would not
+
+  local box = EditBox()
+  if box and box.SetText and type(ChatEdit_SendText) == "function" then
+    box:SetText(text)
+    ChatEdit_SendText(box, 1)
+    Report(Lf("sendHow", "ChatEdit_SendText"))
+    return true
+  end
+
+  if box and box.SetText and type(ChatEdit_OnEnterPressed) == "function" then
+    box:SetText(text)
+    local keep = this
+    this = box
+    ChatEdit_OnEnterPressed(box)
+    this = keep
+    Report(Lf("sendHow", "ChatEdit_OnEnterPressed"))
+    return true
+  end
+
+  if string.sub(text, 1, 1) == "/" then
+    if SlashDispatch(text) then
+      Report(Lf("sendHow", "SlashCmdList"))
+      return true
+    end
+  elseif type(SendChatMessage) == "function" then
+    SendChatMessage(text, "SAY")
+    Report(Lf("sendHow", "SendChatMessage"))
+    return true
+  end
+
+  -- Nothing sent it for us. The line is at least put in the chat box, focused
+  -- and ready, so the player only has to press Enter -- which is still better
+  -- than losing what was pasted.
+  OutStop()
+  if box and box.SetText then
+    PutInBox(text)
+    Report(L("sendManual"))
+    return true
+  end
+  Report(L("sendFail"))
+  return false
 end
 
 ----------------------------------------------------------------------
@@ -631,6 +1058,40 @@ local function DeleteClick(self)
   end
 end
 
+-- The "?" beside a line opens what the client answered the last time that
+-- line was sent from this window.
+local function OutClick(self)
+  local e = EntryOf(self or this)
+  if not e then return end
+  if not OutFor(e.text) then
+    Report(L("outNone"))
+    return
+  end
+  if ShowOutHook then ShowOutHook(e.text) end
+end
+
+-- Reads our own command line and sends it. GetText is the one method this
+-- client does not register on the chat box; on an edit box of our own it is
+-- there, and without it there would be nothing to send.
+local function SendFromInput()
+  if not input then return end
+  if not input.GetText then
+    Report(L("noRead"))
+    return
+  end
+  local text = input:GetText() or ""
+  text = string.gsub(text, "^%s+", "")
+  text = string.gsub(text, "%s+$", "")
+  if text == "" then
+    Report(L("sendNoText"))
+    return
+  end
+  if SendLine(text) then
+    input:SetText("")
+    if UpdatePanelHook then UpdatePanelHook() end
+  end
+end
+
 local function ClearAllClick()
   CommandHistoryDB.lines = {}
   CommandHistoryDB.pins = {}
@@ -714,12 +1175,13 @@ local function BuildPanel()
 
   panel = CreateFrame("Frame", "CommandHistoryPanel", UIParent)
   panel:SetWidth(470)
-  panel:SetHeight(74 + PANEL_ROWS * ROW_H + 30)
+  panel:SetHeight(74 + PANEL_ROWS * ROW_H + 74)
   panel:SetFrameStrata("DIALOG")
   panel:SetToplevel(true)
   panel:SetMovable(true)
   panel:EnableMouse(true)
   panel:RegisterForDrag("LeftButton")
+  EscClose("CommandHistoryPanel")
 
   -- two ways to start the move: the drag event is not always delivered on
   -- this client, so a plain mouse down works as well
@@ -827,7 +1289,7 @@ local function BuildPanel()
     local row = CreateFrame("Button", "CommandHistoryPanelRow" .. i, panel)
     row:SetHeight(ROW_H)
     row:SetPoint("TOPLEFT", panel, "TOPLEFT", 34, top)
-    row:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -58, top)
+    row:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -78, top)
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
     row:SetScript("OnClick", RowClick)
 
@@ -866,10 +1328,15 @@ local function BuildPanel()
       "tipDel", DeleteClick)
     del:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -16, top)
 
+    local out = TinyButton("CommandHistoryPanelOut" .. i, panel, "|cff80c0ff?|r",
+      "tipOut", OutClick)
+    out:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -56, top)
+
     rowButtons[i] = row
     rowButtons["pin" .. i] = pin
     rowButtons["macro" .. i] = macro
     rowButtons["del" .. i] = del
+    rowButtons["out" .. i] = out
     rowNumber[i] = num
     rowUses[i] = uses
     rowText[i] = text
@@ -878,8 +1345,78 @@ local function BuildPanel()
     rowIndex[pin] = i
     rowIndex[macro] = i
     rowIndex[del] = i
+    rowIndex[out] = i
     i = i + 1
   end
+
+  -- Our own command line. The chat box on this client takes nothing from the
+  -- clipboard; an edit box of our own is the only place a paste can land, and
+  -- from here the line goes out without the Enter key the chat box wants.
+  inputLabel = MakeFont(panel, 12)
+  inputLabel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 18, 56)
+  inputLabel:SetWidth(76)
+  inputLabel:SetJustifyH("LEFT")
+  inputLabel:SetTextColor(0.6, 0.6, 0.6)
+
+  input = CreateFrame("EditBox", "CommandHistoryPanelInput", panel)
+  input:SetHeight(18)
+  input:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 96, 54)
+  input:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -104, 54)
+  input:EnableMouse(true)
+  pcall(function() input:SetFontObject(ChatFontNormal) end)
+  if not input:GetFont() or input:GetFont() == "" then
+    input:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+  end
+  input:SetTextColor(1, 1, 1)
+  input:SetJustifyH("LEFT")
+  input:SetMaxLetters(255)
+  input:SetTextInsets(6, 6, 0, 0)
+  input:SetBackdrop({
+    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 12,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+  })
+  input:SetBackdropColor(0, 0, 0, 0.6)
+  pcall(function() input:SetAutoFocus(false) end)
+  input:SetScript("OnMouseDown", function(self)
+    self = self or this
+    if self.SetFocus then self:SetFocus() end
+  end)
+  input:SetScript("OnEscapePressed", function(self)
+    self = self or this
+    if self.ClearFocus then self:ClearFocus() end
+    if panel then panel:Hide() end
+  end)
+  input:SetScript("OnEnterPressed", function(self)
+    self = self or this
+    SendFromInput()
+  end)
+
+  sendButton = CreateFrame("Button", "CommandHistoryPanelSend", panel)
+  sendButton:SetWidth(84)
+  sendButton:SetHeight(18)
+  sendButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -16, 54)
+  sendButton:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+  sendButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+  sendButton:SetScript("OnClick", function() SendFromInput() end)
+  sendButton:SetScript("OnEnter", function(self)
+    self = self or this
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(L("sendTip"))
+    GameTooltip:AddLine(L("inputTip"), 0.7, 0.7, 0.7)
+    GameTooltip:Show()
+  end)
+  sendButton:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+
+  -- the paste hint gets a line of its own: it is the least obvious thing in
+  -- this window and the bottom strip is already full
+  inputHintFS = MakeFont(panel, 11)
+  inputHintFS:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 18, 36)
+  inputHintFS:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -16, 36)
+  inputHintFS:SetJustifyH("LEFT")
+  inputHintFS:SetTextColor(0.55, 0.55, 0.55)
 
   local clear = CreateFrame("Button", "CommandHistoryPanelClear", panel)
   clear:SetWidth(100)
@@ -936,6 +1473,9 @@ local function ApplyPanelStrings()
   if searchLabel then searchLabel:SetText(L("search")) end
   if panelHint then panelHint:SetText(L("hintClick")) end
   if clearButton then clearButton:SetText("|cffffd700" .. L("clearAll") .. "|r") end
+  if inputLabel then inputLabel:SetText(L("inputLabel")) end
+  if sendButton then sendButton:SetText("|cffffd700" .. L("send") .. "|r") end
+  if inputHintFS then inputHintFS:SetText(L("inputHint")) end
 end
 
 UpdatePanel = function()
@@ -959,6 +1499,7 @@ UpdatePanel = function()
     local pin = rowButtons["pin" .. i]
     local macro = rowButtons["macro" .. i]
     local del = rowButtons["del" .. i]
+    local outBtn = rowButtons["out" .. i]
 
     if entry then
       rowEntry[i] = entry
@@ -980,6 +1521,15 @@ UpdatePanel = function()
       row:Show()
       pin:Show()
       del:Show()
+      if outBtn then
+        -- a dim mark when nothing was recorded, a bright one when there is
+        if OutHas(entry.text) then
+          outBtn:SetText("|cff80c0ff?|r")
+        else
+          outBtn:SetText("|cff4a5a6a?|r")
+        end
+        outBtn:Show()
+      end
     else
       rowEntry[i] = nil
       rowNumber[i]:SetText("")
@@ -989,6 +1539,7 @@ UpdatePanel = function()
       pin:Hide()
       macro:Hide()
       del:Hide()
+      if outBtn then outBtn:Hide() end
     end
     i = i + 1
   end
@@ -1260,6 +1811,14 @@ local function HandleSlash(msg)
     Print(L("keysAsk"))
     Print(L("keysNote"))
 
+  elseif msg == "out" then
+    if outLast and OutHas(outLast) then
+      Report(Lf("outLast", outLast))
+      if ShowOutHook then ShowOutHook(nil) end
+    else
+      Report(L("outNone"))
+    end
+
   elseif msg == "probe" then
     local box = ChatFrameEditBox or (getglobal and getglobal("ChatFrame1EditBox"))
     Print(L("probeHead"))
@@ -1276,8 +1835,353 @@ local function HandleSlash(msg)
     end
     Print(Lf("probeLines", Count(), CommandHistoryDB.size, CommandHistoryDB.own and L("on") or L("off")))
 
+    -- what an edit box of OUR own can do, which is a different question from
+    -- what the chat box can do
+    local probe = CreateFrame("EditBox", "CommandHistoryProbeBox", UIParent)
+    probe:Hide()
+    Print(Lf("probeEdit",
+      tostring(probe.GetText ~= nil), tostring(probe.GetNumLetters ~= nil),
+      tostring(probe.Insert ~= nil), tostring(probe.SetMultiLine ~= nil),
+      tostring(probe.HighlightText ~= nil)))
+    local inList = false
+    if type(UISpecialFrames) == "table" then
+      local k = 1
+      while UISpecialFrames[k] do
+        if UISpecialFrames[k] == "CommandHistoryPanel" then inList = true end
+        k = k + 1
+      end
+    end
+    Report(Lf("probeEsc", tostring(type(UISpecialFrames) == "table"),
+      tostring(inList), tostring(origGameMenu ~= nil)))
+
+    local cmds, allLines = 0, 0
+    for _, r in pairs(outBook) do
+      cmds = cmds + 1
+      local k = 1
+      while r.lines and r.lines[k] do allLines = allLines + 1; k = k + 1 end
+    end
+    Report(Lf("probeOut", cmds, allLines, tostring(outWatch ~= nil)))
+    Report(Lf("probeCatch", tostring(chatHookOk), tostring(chatEventCount)))
+
+    local letters = "?"
+    if input and input.GetNumLetters then letters = tostring(input:GetNumLetters()) end
+    Print(Lf("probePaste", letters))
+
   else
     Print(L("help"))
+  end
+end
+
+----------------------------------------------------------------------
+-- the output window
+----------------------------------------------------------------------
+
+-- The text lives in a multi-line EditBox because that is the only widget on
+-- this client a player can select from and copy with Ctrl+C: HighlightText is
+-- not registered here, so selecting cannot be done for them. Paging is ours
+-- rather than a ScrollFrame's -- we own the text, so showing a window of
+-- lines is both simpler and predictable.
+local outFrame, outEdit, outTitleFS, outHintFS, outCmdFS, outCountFS, outEmptyFS
+local outUpBtn, outDownBtn, outFullBtn, outCloseBtn, outClearBtn
+local outShown = nil      -- command the window is showing
+local outOffset = 0
+local outFullMode = false
+local OUT_ROWS_SMALL = 14
+local OUT_ROWS_FULL = 34
+local UpdateOut
+
+local function OutRows()
+  return outFullMode and OUT_ROWS_FULL or OUT_ROWS_SMALL
+end
+
+local function OutApplySize()
+  if not outFrame then return end
+  if outFullMode then
+    outFrame:ClearAllPoints()
+    outFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    outFrame:SetWidth(UIParent:GetWidth() - 80)
+    outFrame:SetHeight(UIParent:GetHeight() - 80)
+    if outFullBtn then outFullBtn:SetText("|cffffd700" .. L("outSmall") .. "|r") end
+  else
+    outFrame:ClearAllPoints()
+    outFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
+    outFrame:SetWidth(600)
+    outFrame:SetHeight(120 + OUT_ROWS_SMALL * 14)
+    if outFullBtn then outFullBtn:SetText("|cffffd700" .. L("outFull") .. "|r") end
+  end
+end
+
+-- Forgetting an answer has to reach both the lookup and the saved array, or
+-- the record comes back on the next login.
+local function OutForget(cmd)
+  if not cmd then return 0 end
+  outBook[cmd] = nil
+  local arr = CommandHistoryDB and CommandHistoryDB.out
+  if type(arr) ~= "table" then return 1 end
+  local n, i = 0, 1
+  while arr[i] do n = n + 1; i = i + 1 end
+  local w = 1
+  i = 1
+  while i <= n do
+    if arr[i] and arr[i].cmd ~= cmd then
+      arr[w] = arr[i]
+      w = w + 1
+    end
+    i = i + 1
+  end
+  while arr[w] do arr[w] = nil; w = w + 1 end
+  if outLast == cmd then
+    outLast = nil
+    if CommandHistoryDB then CommandHistoryDB.outLast = nil end
+  end
+  return 1
+end
+
+local function OutForgetAll()
+  local n = 0
+  for _ in pairs(outBook) do n = n + 1 end
+  outBook = {}
+  outWatch = nil
+  outLast = nil
+  if CommandHistoryDB then
+    CommandHistoryDB.out = {}
+    CommandHistoryDB.outLast = nil
+  end
+  return n
+end
+
+local function BuildOut()
+  if outFrame then return end
+
+  outFrame = CreateFrame("Frame", "CommandHistoryOut", UIParent)
+  outFrame:SetFrameStrata("DIALOG")
+  outFrame:SetToplevel(true)
+  outFrame:SetMovable(true)
+  outFrame:EnableMouse(true)
+  outFrame:SetBackdrop({
+    bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 },
+  })
+  outFrame:Hide()
+  EscClose("CommandHistoryOut")
+
+  local moving = false
+  outFrame:SetScript("OnMouseDown", function(self)
+    self = self or this
+    if outFullMode then return end          -- nothing to drag when it fills the screen
+    if not moving then moving = true; self:StartMoving() end
+  end)
+  outFrame:SetScript("OnMouseUp", function(self)
+    self = self or this
+    if moving then moving = false; self:StopMovingOrSizing() end
+  end)
+
+  outTitleFS = outFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  if not outTitleFS:GetFont() or outTitleFS:GetFont() == "" then
+    outTitleFS:SetFont("Fonts\\FRIZQT__.TTF", 13, "")
+  end
+  outTitleFS:SetPoint("TOP", outFrame, "TOP", 0, -16)
+
+  outCmdFS = MakeFont(outFrame, 12)
+  outCmdFS:SetPoint("TOPLEFT", outFrame, "TOPLEFT", 18, -38)
+  outCmdFS:SetPoint("TOPRIGHT", outFrame, "TOPRIGHT", -18, -38)
+  outCmdFS:SetJustifyH("LEFT")
+  outCmdFS:SetTextColor(1, 0.82, 0)
+
+  outEdit = CreateFrame("EditBox", "CommandHistoryOutText", outFrame)
+  outEdit:SetPoint("TOPLEFT", outFrame, "TOPLEFT", 18, -56)
+  outEdit:SetPoint("BOTTOMRIGHT", outFrame, "BOTTOMRIGHT", -18, 58)
+  outEdit:EnableMouse(true)
+  pcall(function() outEdit:SetMultiLine(true) end)
+  pcall(function() outEdit:SetAutoFocus(false) end)
+  pcall(function() outEdit:SetFontObject(ChatFontNormal) end)
+  if not outEdit:GetFont() or outEdit:GetFont() == "" then
+    outEdit:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+  end
+  outEdit:SetTextColor(0.9, 0.9, 0.9)
+  outEdit:SetJustifyH("LEFT")
+  outEdit:SetJustifyV("TOP")
+  outEdit:SetTextInsets(6, 6, 4, 4)
+  outEdit:SetMaxLetters(0)
+  outEdit:SetBackdrop({
+    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 12,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+  })
+  outEdit:SetBackdropColor(0, 0, 0, 0.7)
+  outEdit:SetScript("OnMouseDown", function(self)
+    self = self or this
+    if self.SetFocus then self:SetFocus() end
+  end)
+  outEdit:SetScript("OnEscapePressed", function(self)
+    self = self or this
+    if self.ClearFocus then self:ClearFocus() end
+    outFrame:Hide()
+  end)
+
+  -- The "nothing recorded" notice is a label OVER the field, not text inside
+  -- it: text inside would be copied along with the answer, and it is not part
+  -- of the answer.
+  outEmptyFS = MakeFont(outFrame, 12)
+  outEmptyFS:SetPoint("TOPLEFT", outEdit, "TOPLEFT", 8, -8)
+  outEmptyFS:SetPoint("TOPRIGHT", outEdit, "TOPRIGHT", -8, -8)
+  outEmptyFS:SetJustifyH("LEFT")
+  outEmptyFS:SetTextColor(0.5, 0.5, 0.5)
+  outEmptyFS:Hide()
+
+  outHintFS = MakeFont(outFrame, 11)
+  outHintFS:SetPoint("BOTTOMLEFT", outFrame, "BOTTOMLEFT", 18, 40)
+  outHintFS:SetWidth(420)
+  outHintFS:SetJustifyH("LEFT")
+  outHintFS:SetTextColor(0.55, 0.55, 0.55)
+
+  outCountFS = MakeFont(outFrame, 11)
+  outCountFS:SetPoint("BOTTOMRIGHT", outFrame, "BOTTOMRIGHT", -18, 40)
+  outCountFS:SetWidth(180)
+  outCountFS:SetJustifyH("RIGHT")
+  outCountFS:SetTextColor(0.55, 0.55, 0.55)
+
+  -- One strip along the bottom, right to left, with a gap between every
+  -- pair: the wide "full screen" button used to be anchored over the arrows.
+  local function WideButton(name, width, right, handler)
+    local b = CreateFrame("Button", name, outFrame)
+    b:SetWidth(width)
+    b:SetHeight(18)
+    b:SetPoint("BOTTOMRIGHT", outFrame, "BOTTOMRIGHT", right, 12)
+    b:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
+    b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+    b:SetScript("OnClick", handler)
+    return b
+  end
+
+  outCloseBtn = WideButton("CommandHistoryOutClose", 70, -16, function() outFrame:Hide() end)
+
+  outFullBtn = WideButton("CommandHistoryOutFull", 112, -94, function()
+    outFullMode = not outFullMode
+    outOffset = 0
+    OutApplySize()
+    UpdateOut()
+  end)
+
+  outClearBtn = WideButton("CommandHistoryOutClear", 100, -214, function()
+    if IsShiftKeyDown and IsShiftKeyDown() then
+      local n = OutForgetAll()
+      Report(Lf("outClearedAll", n))
+    else
+      if not outShown then return end
+      local cmd = outShown
+      OutForget(cmd)
+      Report(Lf("outCleared", cmd))
+    end
+    outOffset = 0
+    UpdateOut()
+    if UpdatePanelHook then UpdatePanelHook() end
+  end)
+  outClearBtn:SetScript("OnEnter", function(self)
+    self = self or this
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:AddLine(L("outClearTip"))
+    GameTooltip:Show()
+  end)
+  outClearBtn:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+
+  -- the paging arrows live in the left corner: the right half of the strip is
+  -- full of wide buttons and they were sitting on top of each other
+  outUpBtn = TinyButton("CommandHistoryOutUp", outFrame, "|cffffd700^|r", "tipUp",
+    function() outOffset = outOffset - OutRows(); UpdateOut() end)
+  outUpBtn:SetPoint("BOTTOMLEFT", outFrame, "BOTTOMLEFT", 18, 12)
+
+  outDownBtn = TinyButton("CommandHistoryOutDown", outFrame, "|cffffd700v|r", "tipDown",
+    function() outOffset = outOffset + OutRows(); UpdateOut() end)
+  outDownBtn:SetPoint("BOTTOMLEFT", outFrame, "BOTTOMLEFT", 38, 12)
+
+  OutApplySize()
+end
+
+UpdateOut = function()
+  if not outFrame then return end
+
+  outTitleFS:SetText(L("outTitle"))
+  outHintFS:SetText(L("outHint"))
+  outCloseBtn:SetText("|cffffd700" .. L("outClose") .. "|r")
+  outClearBtn:SetText("|cffffd700" .. L("outClear") .. "|r")
+  outFullBtn:SetText("|cffffd700" .. (outFullMode and L("outSmall") or L("outFull")) .. "|r")
+
+  local cmd = outShown
+  outCmdFS:SetText(cmd and Lf("outFor", cmd) or "")
+
+  local rec = cmd and OutFor(cmd)
+  local lines = rec and rec.lines or {}
+  local total = 0
+  while lines[total + 1] do total = total + 1 end
+
+  local rows = OutRows()
+
+  local maxOffset = total - rows
+  if maxOffset < 0 then maxOffset = 0 end
+  if outOffset > maxOffset then outOffset = maxOffset end
+  if outOffset < 0 then outOffset = 0 end
+
+  if total == 0 then
+    outEdit:SetText("")
+    if outEmptyFS then
+      outEmptyFS:SetText(L("outEmpty"))
+      outEmptyFS:Show()
+    end
+    outCountFS:SetText("")
+    return
+  end
+  if outEmptyFS then outEmptyFS:Hide() end
+
+  local text, i = "", 1
+  while i <= rows do
+    local ln = lines[i + outOffset]
+    if not ln then break end
+    if i > 1 then text = text .. "\n" end
+    text = text .. ln
+    i = i + 1
+  end
+  outEdit:SetText(text)
+  outCountFS:SetText(Lf("outLines", outOffset + 1, outOffset + i - 1, total))
+end
+
+local function ShowOut(cmd)
+  BuildOut()
+  outShown = cmd or outLast
+  outOffset = 0
+  OutApplySize()
+  UpdateOut()
+  outFrame:Show()
+end
+
+ShowOutHook = ShowOut
+
+-- UISpecialFrames is the polite way and it is registered above, but it only
+-- works if the client's own Escape handler walks that list. This is the belt
+-- to that braces: Escape with nothing else to do ends in ToggleGameMenu, so a
+-- window of ours standing open takes the key first. Nothing about the
+-- keyboard is captured, so movement keys are untouched.
+local function InstallEscHook()
+  if origGameMenu or type(ToggleGameMenu) ~= "function" then return end
+  origGameMenu = ToggleGameMenu
+  ToggleGameMenu = function()
+    -- the game menu itself wins: Escape has to be able to close it
+    if GameMenuFrame and GameMenuFrame.IsShown and GameMenuFrame:IsShown() then
+      return origGameMenu()
+    end
+    if outFrame and outFrame:IsShown() then
+      outFrame:Hide()
+      return
+    end
+    if panel and panel:IsShown() then
+      panel:Hide()
+      return
+    end
+    return origGameMenu()
   end
 end
 
@@ -1288,11 +2192,24 @@ end
 local function OnEvent(self, ev)
   ev = ev or event
 
+  if ev and string.sub(ev, 1, 9) == "CHAT_MSG_" then
+    OutChatEvent(ev, arg1, arg2)
+    return
+  end
+
+  if ev == "WHO_LIST_UPDATE" then
+    OutWhoList()
+    return
+  end
+
   if ev == "VARIABLES_LOADED" or ev == "PLAYER_LOGIN" then
     InitDB()
+    OutLoad()
+    HookChatFrames()
     HookAll()
     FeedClientHistory()
     ApplyMinimapButton()
+    InstallEscHook()
     return
   end
 
@@ -1300,6 +2217,7 @@ local function OnEvent(self, ev)
     InitDB()
     HookAll()          -- some chat frames appear late
     ApplyMinimapButton()
+    InstallEscHook()
     return
   end
 end
@@ -1310,6 +2228,14 @@ driver = CreateFrame("Frame", "CommandHistoryDriver")
 driver:SetScript("OnEvent", OnEvent)
 driver:SetScript("OnUpdate", function(self, elapsed)
   local e = elapsed or arg1 or 0
+
+  -- stop listening a few seconds after the command went out, or every later
+  -- line of chat would be filed under it
+  if outWatch and GetTime and GetTime() > outUntil then
+    OutStop()
+    if UpdatePanelHook then UpdatePanelHook() end
+  end
+
   if spy > 0 then
     spy = spy - e
     if spy <= 0 then
@@ -1318,6 +2244,16 @@ driver:SetScript("OnUpdate", function(self, elapsed)
     end
   end
 end)
+local ce, ceOk = 1, 0
+while CHAT_EVENTS[ce] do
+  -- an event name this client does not know must not stop the rest
+  local name = CHAT_EVENTS[ce]
+  if pcall(function() driver:RegisterEvent(name) end) then ceOk = ceOk + 1 end
+  ce = ce + 1
+end
+chatEventCount = ceOk
+
+pcall(function() driver:RegisterEvent("WHO_LIST_UPDATE") end)
 driver:RegisterEvent("VARIABLES_LOADED")
 driver:RegisterEvent("PLAYER_LOGIN")
 driver:RegisterEvent("PLAYER_ENTERING_WORLD")
