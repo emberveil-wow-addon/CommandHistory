@@ -6,7 +6,7 @@
 буквы. Поэтому привычной истории по стрелке вверх сделать нельзя — и аддон
 заменяет её списком, который можно посмотреть и щёлкнуть.
 
-![версия](https://img.shields.io/badge/version-0.1.0-blue) ![клиент](https://img.shields.io/badge/client-1.12.1-orange)
+![версия](https://img.shields.io/badge/version-0.2.0-blue) ![клиент](https://img.shields.io/badge/client-1.12.1-orange)
 
 ## Что умеет
 
@@ -24,6 +24,15 @@
 - Удаление одной строки крестиком и полная очистка списка.
 - Кнопка у миникарты: левый клик — открыть список, правый — убрать кнопку,
   Shift+перетаскивание — переместить по кругу.
+- **Своя строка ввода** внизу окна: принимает вставку из буфера по **Ctrl+V**,
+  чего штатное поле чата на этом клиенте не умеет. Enter или кнопка
+  «Отправить» отправляют строку и кладут её в историю.
+- **Окно ответа**: кнопка `?` у строки показывает, что клиент ответил на эту
+  команду в последний раз. Текст можно выделить мышью и скопировать по Ctrl+C,
+  развернуть окно на весь экран, полистать стрелками или забыть кнопкой
+  «Очистить» (с Shift — забыть все записанные ответы). Ответы хранятся между
+  сессиями: последние 10 команд, до 400 строк на команду.
+- Окна закрываются по **Esc**.
 - Русский и английский интерфейс, определяется по локали клиента.
 
 ## Установка
@@ -44,6 +53,7 @@
 | `/cmdh size 50` | сколько строк хранить (по умолчанию 30) |
 | `/cmdh clear` | очистить историю |
 | `/cmdh lang ru\|en\|auto` | язык интерфейса |
+| `/cmdh out` | окно ответа на последнюю команду |
 | `/cmdh probe` | самодиагностика |
 | `/cmdh keys` | 15 секунд печатать, какие клавиши доходят до аддона |
 
@@ -59,7 +69,19 @@
 - вставка картинок в текст (`|T...|t`) не отображается: маркеры съедаются,
   путь печатается как обычный текст;
 - обычная кнопка без шаблона не получает цвета текста — надпись без цветового
-  кода может оказаться невидимой.
+  кода может оказаться невидимой;
+- **`Ctrl+V` работает в своём `EditBox`, но не в штатном поле чата.** У
+  `ChatFrameEditBox` на этом клиенте не зарегистрированы `GetText`,
+  `GetCursorPosition`, `HighlightText` и `GetTextInsets` — это урезанный
+  экземпляр виджета, обычный `CreateFrame("EditBox")` полноценный;
+- апи буфера обмена в Lua нет вовсе: ни прочитать, ни записать. Поэтому свои
+  горячие клавиши вставки или копирования добавить нельзя — их обрабатывает
+  сам клиент внутри виджета;
+- `HighlightText` отсутствует и у своих `EditBox`, так что выделить текст за
+  игрока нечем — только мышью;
+- **обёртка над `frame.AddMessage` не встаёт**: присваивание нового поля фрейму
+  молча не применяется. Ответ сервера ловится подпиской на события `CHAT_MSG_*`,
+  а вывод `/who` — вообще через `WHO_LIST_UPDATE` и `GetWhoInfo`.
 
 ---
 
@@ -88,6 +110,15 @@ this addon replaces it with a list you can look at and click.
 - Delete a single line with the cross, or clear the whole list.
 - A minimap button: left click opens the list, right click hides the button,
   Shift+drag moves it around the ring.
+- **Its own input line** at the bottom of the window: it takes a paste from the
+  clipboard with **Ctrl+V**, which the stock chat box on this client cannot do.
+  Enter or the Send button puts the line on its way and into the history.
+- **Output window**: the `?` beside a line shows what the client answered that
+  command last time. The text can be selected with the mouse and copied with
+  Ctrl+C, the window can fill the screen, pages move with the arrows, and
+  Clear forgets the answer (with Shift, every recorded answer). Answers are
+  kept between sessions: the last 10 commands, up to 400 lines each.
+- The windows close on **Esc**.
 - Russian and English, picked from the client locale.
 
 ## Installation
@@ -99,7 +130,7 @@ this addon replaces it with a list you can look at and click.
 ## Commands
 
 `/commandhistory`, or the short `/cmdh` and `/chh`:
-`panel`, `N`, `list`, `minimap`, `reset`, `size N`, `clear`,
+`panel`, `N`, `out`, `list`, `minimap`, `reset`, `size N`, `clear`,
 `lang ru|en|auto`, `probe`, `keys`.
 
 ## Licence
