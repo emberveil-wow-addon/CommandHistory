@@ -6,7 +6,7 @@
 буквы. Поэтому привычной истории по стрелке вверх сделать нельзя — и аддон
 заменяет её списком, который можно посмотреть и щёлкнуть.
 
-![версия](https://img.shields.io/badge/version-0.2.0-blue) ![клиент](https://img.shields.io/badge/client-1.12.1-orange)
+![версия](https://img.shields.io/badge/version-0.2.1-blue) ![клиент](https://img.shields.io/badge/client-1.12.1-orange)
 
 ## Что умеет
 
@@ -28,10 +28,15 @@
   чего штатное поле чата на этом клиенте не умеет. Enter или кнопка
   «Отправить» отправляют строку и кладут её в историю.
 - **Окно ответа**: кнопка `?` у строки показывает, что клиент ответил на эту
-  команду в последний раз. Текст можно выделить мышью и скопировать по Ctrl+C,
-  развернуть окно на весь экран, полистать стрелками или забыть кнопкой
-  «Очистить» (с Shift — забыть все записанные ответы). Ответы хранятся между
-  сессиями: последние 10 команд, до 400 строк на команду.
+  команду в последний раз. Каждая строка ответа — отдельное поле: щёлкните её,
+  выделите и скопируйте по Ctrl+C. Окно разворачивается на весь экран и тогда
+  показывает столько строк, сколько влезает; листается стрелками; «Очистить»
+  забывает ответ, с Shift — все записанные. Ответы хранятся между сессиями:
+  последние 10 команд, до 400 строк на команду.
+- **`/cmdh cmds`** — команды всех аддонов и клиента: по строке на обработчик со
+  всеми его псевдонимами, в том же окне ответа, откуда список можно листать и
+  копировать. На этом клиенте `/script` отключён, так что иначе этот список
+  никак не получить.
 - Окна закрываются по **Esc**.
 - Русский и английский интерфейс, определяется по локали клиента.
 
@@ -54,6 +59,7 @@
 | `/cmdh clear` | очистить историю |
 | `/cmdh lang ru\|en\|auto` | язык интерфейса |
 | `/cmdh out` | окно ответа на последнюю команду |
+| `/cmdh cmds` | команды всех аддонов списком |
 | `/cmdh probe` | самодиагностика |
 | `/cmdh keys` | 15 секунд печатать, какие клавиши доходят до аддона |
 
@@ -81,7 +87,13 @@
   игрока нечем — только мышью;
 - **обёртка над `frame.AddMessage` не встаёт**: присваивание нового поля фрейму
   молча не применяется. Ответ сервера ловится подпиской на события `CHAT_MSG_*`,
-  а вывод `/who` — вообще через `WHO_LIST_UPDATE` и `GetWhoInfo`.
+  а вывод `/who` — вообще через `WHO_LIST_UPDATE` и `GetWhoInfo`;
+- **`/script` и `/run` отключены** — строка просто уходит в чат как обычное
+  сообщение. Всё, что нужно посмотреть или посчитать, приходится делать внутри
+  аддона;
+- **в многострочном `EditBox` мышью выделяется только первая строка**, ни строка
+  ниже, ни несколько подряд. Поэтому в окне ответа каждая строка — своё
+  однострочное поле.
 
 ---
 
@@ -114,10 +126,14 @@ this addon replaces it with a list you can look at and click.
   clipboard with **Ctrl+V**, which the stock chat box on this client cannot do.
   Enter or the Send button puts the line on its way and into the history.
 - **Output window**: the `?` beside a line shows what the client answered that
-  command last time. The text can be selected with the mouse and copied with
-  Ctrl+C, the window can fill the screen, pages move with the arrows, and
-  Clear forgets the answer (with Shift, every recorded answer). Answers are
-  kept between sessions: the last 10 commands, up to 400 lines each.
+  command last time. Every line of the answer is a field of its own: click it,
+  select it and copy with Ctrl+C. The window can fill the screen and then shows
+  as many lines as fit; the arrows page through it; Clear forgets the answer,
+  and with Shift every recorded answer. Answers are kept between sessions: the
+  last 10 commands, up to 400 lines each.
+- **`/cmdh cmds`** lists the commands of every addon and of the client itself,
+  one line per handler with all its aliases, in the same output window. This
+  client has `/script` disabled, so there is no other way to get that list.
 - The windows close on **Esc**.
 - Russian and English, picked from the client locale.
 
@@ -130,7 +146,7 @@ this addon replaces it with a list you can look at and click.
 ## Commands
 
 `/commandhistory`, or the short `/cmdh` and `/chh`:
-`panel`, `N`, `out`, `list`, `minimap`, `reset`, `size N`, `clear`,
+`panel`, `N`, `out`, `cmds`, `list`, `minimap`, `reset`, `size N`, `clear`,
 `lang ru|en|auto`, `probe`, `keys`.
 
 ## Licence
